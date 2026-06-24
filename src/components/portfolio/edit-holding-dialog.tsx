@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { Pencil } from "lucide-react";
 import { toast } from "sonner";
-import { updateShares, type ActionResult } from "@/app/portfolio/actions";
+import { updateHolding, type ActionResult } from "@/app/portfolio/actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 
 const initialState: ActionResult = {};
 
-export function EditSharesDialog({
+export function EditHoldingDialog({
   id,
   ticker,
   shares,
@@ -30,13 +30,13 @@ export function EditSharesDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(
-    updateShares,
+    updateHolding,
     initialState
   );
 
   useEffect(() => {
     if (state.ok) {
-      toast.success("Shares updated.");
+      toast.success("Holding updated.");
       setOpen(false);
     } else if (state.error) {
       toast.error(state.error);
@@ -47,7 +47,7 @@ export function EditSharesDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button variant="ghost" size="icon" aria-label="Edit shares">
+          <Button variant="ghost" size="icon" aria-label="Edit holding">
             <Pencil className="h-4 w-4" />
           </Button>
         }
@@ -56,11 +56,26 @@ export function EditSharesDialog({
         <form action={formAction} className="space-y-4">
           <input type="hidden" name="id" value={id} />
           <DialogHeader>
-            <DialogTitle>Edit Shares — {ticker}</DialogTitle>
+            <DialogTitle>Edit Holding — {ticker}</DialogTitle>
             <DialogDescription>
-              Update the number of shares you own.
+              Update the ticker symbol or number of shares.
             </DialogDescription>
           </DialogHeader>
+
+          <div className="space-y-2">
+            <Label htmlFor={`ticker-${id}`}>Ticker Symbol</Label>
+            <Input
+              id={`ticker-${id}`}
+              name="ticker"
+              defaultValue={ticker}
+              autoCapitalize="characters"
+              className="uppercase"
+              onChange={(e) => {
+                e.currentTarget.value = e.currentTarget.value.toUpperCase();
+              }}
+              required
+            />
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor={`shares-${id}`}>Number of Shares</Label>

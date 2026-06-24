@@ -20,6 +20,43 @@ export type PortfolioRow = {
   priceUnavailable: boolean;
 };
 
+/** Returns the latest regular-market price, or null if it can't be resolved. */
+async function priceFor(ticker: string): Promise<number | null> {
+  try {
+    const quote = (await yahooFinance.quote(ticker)) as {
+      regularMarketPrice?: number;
+    } | null;
+    const price = quote?.regularMarketPrice;
+    if (typeof price === "number" && Number.isFinite(price)) return price;
+  } catch {
+    // Invalid ticker or network/API failure.
+  }
+  return null;
+}
+
+/** Best-effort "did you mean" suggestion for an unrecognized symbol. */
+async function suggestSymbol(query: string): Promise<string | undefined> {
+  try {
+    const res = (await yahooFinance.search(query)) as {
+      quotes?: Array<{ symbol?: string; isYahooFinance?: boolean }>;
+    };
+    return res.quotes?.find((q) => q.isYahooFinance && q.symbol)?.symbol;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Validates a symbol has a live price; otherwise returns a helpful error. */
+async function validateTicker(ticker: string): Promise<ActionResult> {
+  if ((await priceFor(ticker)) !== null) return { ok: true };
+  const suggestion = await suggestSymbol(ticker);
+  return {
+    error: suggestion
+      ? `No price found for ${ticker}. Did you mean ${suggestion}? (Non-US tickers need an exchange suffix, e.g. NDQ.AX.)`
+      : `No price found for ${ticker}. Check the symbol — non-US tickers need an exchange suffix, e.g. NDQ.AX.`,
+  };
+}
+
 export async function addPortfolioItem(
   _prev: ActionResult,
   formData: FormData
@@ -43,6 +80,9 @@ export async function addPortfolioItem(
     averagePrice = parsed;
   }
 
+  const valid = await validateTicker(ticker);
+  if (valid.error) return valid;
+
   try {
     await prisma.portfolioItem.create({
       data: { ticker, shares, averagePrice },
@@ -62,19 +102,39 @@ export async function addPortfolioItem(
   return { ok: true };
 }
 
-export async function updateShares(
+export async function updateHolding(
   _prev: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
   const id = String(formData.get("id") ?? "");
+  const ticker = String(formData.get("ticker") ?? "")
+    .trim()
+    .toUpperCase();
   const shares = Number(formData.get("shares"));
 
   if (!id) return { error: "Missing holding id." };
+  if (!ticker) return { error: "Ticker is required." };
   if (!Number.isFinite(shares) || shares <= 0) {
     return { error: "Shares must be a positive number." };
   }
 
-  await prisma.portfolioItem.update({ where: { id }, data: { shares } });
+  const valid = await validateTicker(ticker);
+  if (valid.error) return valid;
+
+  try {
+    await prisma.portfolioItem.update({
+      where: { id },
+      data: { ticker, shares },
+    });
+  } catch (e) {
+    if (
+      e instanceof Prisma.PrismaClientKnownRequestError &&
+      e.code === "P2002"
+    ) {
+      return { error: `${ticker} is already in your portfolio.` };
+    }
+    throw e;
+  }
 
   revalidatePath("/portfolio");
   revalidatePath("/");
@@ -99,20 +159,8 @@ export async function getPortfolioWithPrices(): Promise<PortfolioRow[]> {
 
   return Promise.all(
     items.map(async (item) => {
-      let currentPrice = 0;
-      let priceUnavailable = true;
-      try {
-        const quote = (await yahooFinance.quote(item.ticker)) as {
-          regularMarketPrice?: number;
-        } | null;
-        const price = quote?.regularMarketPrice;
-        if (typeof price === "number" && Number.isFinite(price)) {
-          currentPrice = price;
-          priceUnavailable = false;
-        }
-      } catch {
-        // Invalid ticker or network/API failure -> leave price at 0.
-      }
+      const price = await priceFor(item.ticker);
+      const currentPrice = price ?? 0;
 
       return {
         id: item.id,
@@ -121,7 +169,7 @@ export async function getPortfolioWithPrices(): Promise<PortfolioRow[]> {
         averagePrice: item.averagePrice,
         currentPrice,
         totalValue: item.shares * currentPrice,
-        priceUnavailable,
+        priceUnavailable: price === null,
       };
     })
   );

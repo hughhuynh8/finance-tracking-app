@@ -1,7 +1,7 @@
 import { getPortfolioWithPrices } from "@/app/portfolio/actions";
 import { formatCurrency } from "@/lib/format";
 import { AddHoldingDialog } from "@/components/portfolio/add-holding-dialog";
-import { EditSharesDialog } from "@/components/portfolio/edit-shares-dialog";
+import { EditHoldingDialog } from "@/components/portfolio/edit-holding-dialog";
 import { DeleteHoldingButton } from "@/components/portfolio/delete-holding-button";
 import {
   Table,
@@ -69,7 +69,7 @@ export default async function PortfolioPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
-                      <EditSharesDialog
+                      <EditHoldingDialog
                         id={r.id}
                         ticker={r.ticker}
                         shares={r.shares}
