@@ -4,6 +4,7 @@ export const INCOME_CATEGORIES = [
   "Salary",
   "Freelance",
   "Dividends",
+  "Investments",
   "Refunds",
   "Other",
 ] as const;
