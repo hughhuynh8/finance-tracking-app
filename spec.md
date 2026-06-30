@@ -79,6 +79,17 @@ When creating the frontend forms for `Transaction`, use these default categories
     *   Calculate Total Value = `shares * currentPrice`.
 *   **View:** A data table showing: Ticker, Shares Owned, Current Price, Total Value. Include "Edit Shares" and "Delete" actions.
 
+### Page 4: Home Loans (`/mortgage`)
+*   **Header:** "Home Loans".
+*   **Action:** "Add Loan" button that opens a Modal/Dialog form.
+*   **Form Fields:** Loan Name (Text), Loan Amount (Number), Interest Rate (% p.a., Number), Scheduled Monthly Repayment (Number), Start Date (Date picker).
+*   **Repayments:** Each loan logs individual repayments (Date, Amount) via an "Add Repayment" dialog; repayments cascade-delete with their loan.
+*   **Amortization Logic (`src/lib/mortgage.ts`):**
+    *   Replay logged repayments from the opening balance, accruing interest *daily* between repayments, to produce the real balance curve and current balance.
+    *   Project forward from the current balance using simple monthly compounding at the scheduled repayment to estimate the payoff date, months remaining, and remaining interest.
+    *   If the scheduled repayment doesn't cover the first month's interest, flag the loan as never amortizing instead of looping forever.
+*   **View:** A per-loan card with a summary (current balance, est. payoff date, time remaining, interest remaining), a dependency-free SVG chart of balance over time (solid = actual, dashed = projection), and a repayments table with "Add Repayment" / "Delete" actions.
+
 ## 6. Implementation Steps for Claude Code
 
 **Claude, please execute this project step-by-step. Stop and ask for my confirmation after completing each phase before moving to the next.**

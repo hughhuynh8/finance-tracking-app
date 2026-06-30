@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Receipt, LineChart, Wallet } from "lucide-react";
+import { LayoutDashboard, Receipt, LineChart, Home, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/transactions", label: "Transactions", icon: Receipt },
   { href: "/portfolio", label: "Portfolio", icon: LineChart },
+  { href: "/mortgage", label: "Home Loans", icon: Home },
 ];
 
 export function Navbar() {
