@@ -82,10 +82,11 @@ When creating the frontend forms for `Transaction`, use these default categories
 ### Page 4: Home Loans (`/mortgage`)
 *   **Header:** "Home Loans".
 *   **Action:** "Add Loan" button that opens a Modal/Dialog form.
-*   **Form Fields:** Loan Name (Text), Loan Amount (Number), Interest Rate (% p.a., Number), Scheduled Monthly Repayment (Number), Start Date (Date picker).
+*   **Form Fields:** Loan Name (Text), Loan Amount (Number), Interest Rate (% p.a., Number), Scheduled Monthly Repayment (Number), Offset Account Balance (Number, optional), Start Date (Date picker).
+*   **Offset Account:** An optional linked savings balance; interest accrues only on `max(0, balance - offset)`. Editable per-loan via an "Update Offset Balance" dialog so it can be kept current; treated as constant over the loan's life.
 *   **Repayments:** Each loan logs individual repayments (Date, Amount) via an "Add Repayment" dialog; repayments cascade-delete with their loan.
 *   **Amortization Logic (`src/lib/mortgage.ts`):**
-    *   Replay logged repayments from the opening balance, accruing interest *daily* between repayments, to produce the real balance curve and current balance.
+    *   Replay logged repayments from the opening balance, accruing interest *daily* on the offset-adjusted balance between repayments, to produce the real balance curve and current balance.
     *   Project forward from the current balance using simple monthly compounding at the scheduled repayment to estimate the payoff date, months remaining, and remaining interest.
     *   If the scheduled repayment doesn't cover the first month's interest, flag the loan as never amortizing instead of looping forever.
 *   **View:** A per-loan card with a summary (current balance, est. payoff date, time remaining, interest remaining), a dependency-free SVG chart of balance over time (solid = actual, dashed = projection), and a repayments table with "Add Repayment" / "Delete" actions.

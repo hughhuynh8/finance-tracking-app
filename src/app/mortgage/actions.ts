@@ -12,6 +12,7 @@ export type MortgageWithAmortization = {
   principal: number;
   interestRate: number;
   monthlyRepayment: number;
+  offsetBalance: number;
   startDate: Date;
   repayments: { id: string; date: Date; amount: number }[];
   amortization: Amortization;
@@ -25,6 +26,16 @@ function parseDay(value: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+// Parse the optional offset balance: blank/missing means no offset (0); a
+// negative or non-numeric value is invalid and returns null.
+function parseOffset(value: FormDataEntryValue | null): number | null {
+  const raw = String(value ?? "").trim();
+  if (raw === "") return 0;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return n;
+}
+
 export async function addMortgage(
   _prev: ActionResult,
   formData: FormData
@@ -33,6 +44,7 @@ export async function addMortgage(
   const principal = Number(formData.get("principal"));
   const interestRate = Number(formData.get("interestRate"));
   const monthlyRepayment = Number(formData.get("monthlyRepayment"));
+  const offsetBalance = parseOffset(formData.get("offsetBalance"));
   const startDate = parseDay(String(formData.get("startDate") ?? ""));
 
   if (!name) return { error: "Loan name is required." };
@@ -45,10 +57,44 @@ export async function addMortgage(
   if (!Number.isFinite(monthlyRepayment) || monthlyRepayment <= 0) {
     return { error: "Monthly repayment must be a positive number." };
   }
+  if (offsetBalance === null) {
+    return { error: "Offset balance must be a non-negative number." };
+  }
   if (!startDate) return { error: "A valid start date is required." };
 
   await prisma.mortgage.create({
-    data: { name, principal, interestRate, monthlyRepayment, startDate },
+    data: {
+      name,
+      principal,
+      interestRate,
+      monthlyRepayment,
+      offsetBalance,
+      startDate,
+    },
+  });
+
+  revalidatePath("/mortgage");
+  revalidatePath("/");
+  return { ok: true };
+}
+
+// Update just the offset account balance for a loan. Kept separate from add so
+// the user can keep the offset current as their savings change.
+export async function updateOffset(
+  _prev: ActionResult,
+  formData: FormData
+): Promise<ActionResult> {
+  const id = String(formData.get("id") ?? "");
+  const offsetBalance = parseOffset(formData.get("offsetBalance"));
+
+  if (!id) return { error: "Missing loan id." };
+  if (offsetBalance === null) {
+    return { error: "Offset balance must be a non-negative number." };
+  }
+
+  await prisma.mortgage.update({
+    where: { id },
+    data: { offsetBalance },
   });
 
   revalidatePath("/mortgage");
@@ -106,6 +152,7 @@ export async function getMortgages(): Promise<MortgageWithAmortization[]> {
     principal: m.principal,
     interestRate: m.interestRate,
     monthlyRepayment: m.monthlyRepayment,
+    offsetBalance: m.offsetBalance,
     startDate: m.startDate,
     repayments: m.repayments.map((r) => ({
       id: r.id,
@@ -116,6 +163,7 @@ export async function getMortgages(): Promise<MortgageWithAmortization[]> {
       principal: m.principal,
       interestRate: m.interestRate,
       monthlyRepayment: m.monthlyRepayment,
+      offsetBalance: m.offsetBalance,
       startDate: m.startDate,
       repayments: m.repayments.map((r) => ({ date: r.date, amount: r.amount })),
     }),

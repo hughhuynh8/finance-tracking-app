@@ -3,6 +3,7 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { formatMonths } from "@/lib/mortgage";
 import { AddMortgageDialog } from "@/components/mortgage/add-mortgage-dialog";
 import { AddRepaymentDialog } from "@/components/mortgage/add-repayment-dialog";
+import { EditOffsetDialog } from "@/components/mortgage/edit-offset-dialog";
 import { DeleteMortgageButton } from "@/components/mortgage/delete-mortgage-button";
 import { DeleteRepaymentButton } from "@/components/mortgage/delete-repayment-button";
 import { BalanceChart } from "@/components/mortgage/balance-chart";
@@ -57,11 +58,18 @@ export default async function MortgagePage() {
                     <CardTitle>{m.name}</CardTitle>
                     <CardDescription>
                       {formatCurrency(m.principal)} at {m.interestRate}% p.a. ·{" "}
-                      {formatCurrency(m.monthlyRepayment)}/mo · opened{" "}
+                      {formatCurrency(m.monthlyRepayment)}/mo · offset{" "}
+                      {formatCurrency(m.offsetBalance)} · opened{" "}
                       {formatDate(m.startDate)}
                     </CardDescription>
                   </div>
-                  <DeleteMortgageButton id={m.id} />
+                  <div className="flex items-center gap-1">
+                    <EditOffsetDialog
+                      id={m.id}
+                      offsetBalance={m.offsetBalance}
+                    />
+                    <DeleteMortgageButton id={m.id} />
+                  </div>
                 </div>
               </CardHeader>
 

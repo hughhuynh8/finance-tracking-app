@@ -99,6 +99,18 @@ export function AddMortgageDialog() {
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="offsetBalance">Offset Account Balance (optional)</Label>
+            <Input
+              id="offsetBalance"
+              name="offsetBalance"
+              type="number"
+              step="any"
+              min="0"
+              placeholder="0"
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="startDate">Start Date (opening balance)</Label>
             <Input id="startDate" name="startDate" type="date" required />
           </div>

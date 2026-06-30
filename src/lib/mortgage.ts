@@ -11,6 +11,10 @@ export type MortgageInput = {
   principal: number;
   interestRate: number; // annual nominal rate, percent (e.g. 6.14)
   monthlyRepayment: number; // scheduled monthly repayment used for projection
+  // Linked offset account balance. Interest accrues only on the loan balance
+  // above this amount, i.e. max(0, balance - offset). Treated as constant over
+  // the loan's life (a simplification — see note in computeAmortization).
+  offsetBalance: number;
   startDate: Date; // opening-balance date
   repayments: { date: Date; amount: number }[];
 };
@@ -48,6 +52,12 @@ function addMonths(d: Date, n: number): Date {
 export function computeAmortization(m: MortgageInput): Amortization {
   const dailyRate = m.interestRate / 100 / 365;
   const monthlyRate = m.interestRate / 100 / 12;
+  const offset = Math.max(0, m.offsetBalance);
+
+  // The portion of the balance that actually accrues interest after the offset
+  // account is applied. The offset is treated as constant across the loan's
+  // life, so it's applied to historical accrual as well as the projection.
+  const offsetAdjusted = (bal: number) => Math.max(0, bal - offset);
 
   // --- Actual history: replay repayments in date order from the opening balance.
   const sorted = [...m.repayments].sort(
@@ -59,7 +69,8 @@ export function computeAmortization(m: MortgageInput): Amortization {
   let totalInterestPaid = 0;
 
   for (const r of sorted) {
-    const interest = balance * dailyRate * daysBetween(prevDate, r.date);
+    const interest =
+      offsetAdjusted(balance) * dailyRate * daysBetween(prevDate, r.date);
     totalInterestPaid += interest;
     balance = balance + interest - r.amount;
     if (balance < 0) balance = 0;
@@ -80,7 +91,7 @@ export function computeAmortization(m: MortgageInput): Amortization {
   let neverPaysOff = false;
 
   if (!paidOff) {
-    if (m.monthlyRepayment <= currentBalance * monthlyRate) {
+    if (m.monthlyRepayment <= offsetAdjusted(currentBalance) * monthlyRate) {
       // Repayment can't outpace interest — the loan never amortizes.
       neverPaysOff = true;
     } else {
@@ -88,7 +99,7 @@ export function computeAmortization(m: MortgageInput): Amortization {
       let d = prevDate;
       let months = 0;
       while (b > 0 && months < MAX_PROJECTION_MONTHS) {
-        const interest = b * monthlyRate;
+        const interest = offsetAdjusted(b) * monthlyRate;
         totalInterestRemaining += interest;
         b = b + interest - m.monthlyRepayment;
         if (b < 0) b = 0;
