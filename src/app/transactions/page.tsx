@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { AddTransactionDialog } from "@/components/transactions/add-transaction-dialog";
+import { ImportStatementDialog } from "@/components/transactions/import-statement-dialog";
 import { DeleteTransactionButton } from "@/components/transactions/delete-transaction-button";
 import {
   Table,
@@ -22,7 +23,10 @@ export default async function TransactionsPage() {
         <h1 className="text-2xl font-semibold tracking-tight">
           Income &amp; Expenses
         </h1>
-        <AddTransactionDialog />
+        <div className="flex items-center gap-2">
+          <ImportStatementDialog />
+          <AddTransactionDialog />
+        </div>
       </div>
 
       <div className="rounded-md border">
